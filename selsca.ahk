@@ -135,12 +135,16 @@ autoconfirm := false
 
 ; force admin rights
 if (A_IsCompiled){
+  allparams := ""
+  for param in A_Args {
+    allparams .= param . " "
+  }
   full_command_line := DllCall("GetCommandLine", "str")
 
   if not (A_IsAdmin or RegExMatch(full_command_line, " /restart(?!\S)")) {
     try
     {
-      Run *RunAs %full_command_line% /restart
+      Run *RunAs %A_ScriptFullPath% /restart %allparams%
     }
     ExitApp
   }
