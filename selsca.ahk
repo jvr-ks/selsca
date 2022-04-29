@@ -136,8 +136,8 @@ autoconfirm := false
 ; force admin rights
 if (A_IsCompiled){
   allparams := ""
-  for param in A_Args {
-    allparams .= param . " "
+  for keyGL, valueGL in A_Args {
+    allparams .= valueGL . " "
   }
   full_command_line := DllCall("GetCommandLine", "str")
 
