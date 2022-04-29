@@ -1,0 +1,9 @@
+(Scala-2.13.6),C:\shared\scala-2.13.6,...\bin
+(Scala-2.13.5),C:\shared\scala-2.13.5,...\bin
+(Scala-2.12.13),C:\shared\scala-2.12.13,...\bin
+(Scala-2.11.12),C:\shared\scala-2.11.12,...\bin
+(Scala-2.10.7),C:\shared\scala-2.10.7,...\bin
+
+
+
+
