@@ -3,6 +3,7 @@
   
 Version (>=)| Change
 ------------ | -------------
+0.031 | File "mime.type" created auto. if not existent
 0.030 | UAC request integrated
   
 #### Known issues / bugs 
