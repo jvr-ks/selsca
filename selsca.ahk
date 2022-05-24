@@ -83,7 +83,7 @@ wrkDir := A_ScriptDir . "\"
 appName := "Selsca"
 appnameLower := "selsca"
 extension := ".exe"
-appVersion := "0.031"
+appVersion := "0.032"
 
 bit := (A_PtrSize=8 ? "64" : "32")
 
@@ -727,45 +727,60 @@ restart(){
   
   return
 }
-;****************************** openGithubPage ******************************
+;------------------------------ openGithubPage ------------------------------
 openGithubPage(){
   global appName
   
-  tipWindow("WARNING: Remember, you are an admin!", transp := 0, timeout := 10000, refresh := true)
+  csave := clipboardall
+
   StringLower, name, appName
-  Run https://github.com/jvr-ks/%name%
+  clipboard :=  "https://github.com/jvr-ks/" . name
+  sendInput,#r
+  sleep,1000
+  sendInput,^v
+  sendInput,{ENTER}
+  
+  clipboard := csave
   
   return
 }
 ;---------------------------- openScala2Download ----------------------------
 openScala2Download(){
-  global appName
   
-  tipWindow("WARNING: Remember, you are an admin!", transp := 0, timeout := 10000, refresh := true)
-  StringLower, name, appName
-  Run https://www.scala-lang.org/download/scala2.html
+  csave := clipboardall
+  clipboard := "https://www.scala-lang.org/download/scala2.html"
+  sendInput,#r
+  sleep,1000
+  sendInput,^v
+  sendInput,{ENTER}
+  clipboard := csave
   
   return
 }
 ;---------------------------- openScala3Download ----------------------------
 openScala3Download(){
-  global appName
   
-  tipWindow("WARNING: Remember, you are an admin!", transp := 0, timeout := 10000, refresh := true)
-  StringLower, name, appName
-  Run https://www.scala-lang.org/download/scala3.html
+  csave := clipboardall
+  clipboard := "https://www.scala-lang.org/download/scala3.html"
+  sendInput,#r
+  sleep,1000
+  sendInput,^v
+  sendInput,{ENTER}
+  clipboard := csave
   
   return
 }
 
 ;-------------------------- openScala3LinuxDownload --------------------------
 openScala3LinuxDownload(){
-  global appName
-  
-  tipWindow("WARNING: Remember, you are an admin!", transp := 0, timeout := 10000, refresh := true)
-  StringLower, name, appName
-  Run https://repo1.maven.org/maven2/org/scala-lang/scala3-compiler_3/
-  
+
+  csave := clipboardall
+  clipboard := "https://repo1.maven.org/maven2/org/scala-lang/scala3-compiler_3/"
+  sendInput,#r
+  sleep,1000
+  sendInput,^v
+  sendInput,{ENTER}
+  clipboard := csave
   return
 }
 ;******************************* editselscaFile *******************************
