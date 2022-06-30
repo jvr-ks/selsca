@@ -549,6 +549,7 @@ restartAppNoupdate(){
 }
 ;--------------------------------- updateApp ---------------------------------
 updateApp(){
+  ; deprecated, use Updater
   global appName
   global bitName
   global appVersion
@@ -589,7 +590,29 @@ updateApp(){
   
   return
 }
+;------------------------------- center_MsgBox -------------------------------
+; OnMessage(0x44, "center_MsgBox")
 
+center_MsgBox(P) {
+  global hMain
+  
+  if (P == 1027) {
+    ownPID := DllCall("GetCurrentProcessId")
+    if WinExist("ahk_pid " . ownPID) {
+      WinGet, State, MinMax
+      if !(State == -1) {
+        WinGetPosEx(hMain,eX,eY,eW,eH,Offset_X,Offset_Y)
+        DetectHiddenWindows, On
+        if WinExist("ahk_class #32770 ahk_pid " . ownPID) {
+          WinGetPos,,,mW,mH
+          WinMove,(eW-mW)/2 + eX, (eH-mH)/2 + eY
+        }
+      }
+    }
+  }
+  
+  return true
+}
 ; ----------------------------------------------------------------------------- 
 
 
