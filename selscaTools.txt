@@ -1,0 +1,23 @@
+// selscaTools.txt
+
+//---------------------- Setting Scala version with SBT ----------------------
+Create an environment-variable "DOTTYLATEST" with the Scala version
+and then use inside the build-file:
+
+inThisBuild(
+  List(
+    scalaVersion := sys.env.get("DOTTYLATEST").getOrElse("3.2.2")
+  )
+)
+
+//------------------------------ SBT script mode ------------------------------
+SBT script mode
+
+sbt -Dsbt.version=1.8.2 -Dsbt.main.class=sbt.ScriptMain xscript.scala
+
+but needs a build-file and a "project"-directory.
+
+
+
+
+

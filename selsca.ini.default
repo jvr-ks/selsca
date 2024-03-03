@@ -1,0 +1,22 @@
+[hotkeys]
+menuhotkey="!p"
+exithotkey="+!p"
+
+[config]
+listWidth=800
+font="Segoe UI"
+fontsize=9
+selscaRestPort=65501
+linesInListMax=30
+
+[external]
+notepadpath="C:\Program Files\Notepad++\notepad++.exe"
+linkListFile="selscaLinkList.txt"
+
+
+[gui]
+dpiScale=96
+windowPosX=0
+windowPosY=0
+clientWidth=503
+clientHeight=271
