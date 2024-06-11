@@ -253,6 +253,6 @@ Start of development: 2021/04/17
 
 
 ##### Virusscan at Virustotal 
-[Virusscan at Virustotal, selsca.exe 64bit-exe, Check here](https://www.virustotal.com/gui/url/bf89ffe0f4f09bca2fd35f696f2c28716cd5107c2dcff1070621a002909bcca8/detection/u-bf89ffe0f4f09bca2fd35f696f2c28716cd5107c2dcff1070621a002909bcca8-1709467288
+[Virusscan at Virustotal, selsca.exe 64bit-exe, Check here](https://www.virustotal.com/gui/url/bf89ffe0f4f09bca2fd35f696f2c28716cd5107c2dcff1070621a002909bcca8/detection/u-bf89ffe0f4f09bca2fd35f696f2c28716cd5107c2dcff1070621a002909bcca8-1718100419
 )  
 Use [CTRL] + Click to open in a new window! 
