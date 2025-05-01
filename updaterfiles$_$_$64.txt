@@ -1,0 +1,17 @@
+selsca.exe
+selsca.txt
+resetvars.vbs
+scala3scripttest.bat
+scala3scripttest.scala
+selscaLinkList.txt
+selscaTools.txt
+scalaVersion.exe
+setScalaVersion2.13.8.bat
+setScala3Version.3.2.2.bat
+testDirectCall.bat
+testRestApi.bat
+
+
+
+
+

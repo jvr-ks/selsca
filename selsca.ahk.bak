@@ -1,0 +1,1275 @@
+/*
+ *********************************************************************************
+ * 
+ * selsca.ahk
+ * 
+ * use UTF-8 (no BOM)
+ * 
+ * Version -> appVersion
+ * 
+ * Copyright (c) 2020 jvr.de. All rights reserved.
+ *
+ *
+ *********************************************************************************
+*/
+
+/*
+ *********************************************************************************
+ * 
+ * MIT License
+ * 
+ * 
+ * Copyright (c) 2020 jvr.de. All rights reserved.
+ 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sub-license, and/or sell copies 
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
+
+ * The above copyright notice and this permission notice shall be included in all 
+ * copies or substantial portions of the Software.
+
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANT-ABILITY, 
+ * FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE 
+ * UTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+  *********************************************************************************
+*/
+
+#NoEnv
+#Warn
+#SingleInstance force
+#Persistent
+
+#Include %A_ScriptDir%
+
+;#Include, Lib\ahk_common.ahk
+
+; https://github.com/zhamlin/AHKhttp
+#include, Lib\AHKhttp.ahk
+
+; http://www.autohotkey.com/forum/viewtopic.php?p=355775
+#include, Lib\AHKsock.ahk
+
+
+;auto-include Lib\..
+;hkToDescription.ahk
+;hotkeyToText.ahk
+;ScrollBox.ahk
+
+
+; force admin rights
+if (A_IsCompiled){
+  allparams := ""
+  for keyGL, valueGL in A_Args {
+    allparams .= valueGL . " "
+  }
+  full_command_line := DllCall("GetCommandLine", "str")
+
+  if not (A_IsAdmin or RegExMatch(full_command_line, " /restart(?!\S)")) {
+    try
+    {
+      Run *RunAs %A_ScriptFullPath% /restart %allparams%
+    }
+    ExitApp
+  }
+} else {
+  if (!A_IsAdmin){
+    MsgBox, Script must be run as an admin!
+    exitApp
+  }
+}
+
+; comment out to use default speed
+;SetBatchLines, -1
+
+selscaRestPortDefault := 65501
+selscaRestPort := selscaRestPortDefault
+
+SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
+SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
+
+FileEncoding, UTF-8-RAW
+
+wrkDir := A_ScriptDir . "\"
+
+appName := "Selsca"
+appnameLower := "selsca"
+extension := ".exe"
+appVersion := "0.036"
+
+bit := (A_PtrSize=8 ? "64" : "32")
+
+if (!A_IsUnicode)
+  bit := "A" . bit
+
+bitName := (bit="64" ? "" : bit)
+
+app := appName . " " . appVersion . " " . bit . "-bit"
+
+configFile := appnameLower . ".ini"
+configFileLocal := appnameLower . "_" . A_ComputerName . ".ini"
+
+; "appnameLower_COMPUTERNAME.ini" takes precedence over "appnameLower.ini" 
+if (FileExist(configFileLocal)){
+  configFile := configFileLocal
+}
+
+selscaFileDefault := "selsca.txt"
+selscaFile := selscaFileDefault
+
+selscaFile := resolvepath(wrkDir,selscaFile)
+
+linkListFileDefault := "selscaLinkList.txt"
+linkListFile := linkListFileDefault
+
+listWidthDefault := 800
+listWidth := listWidthDefault
+
+fontDefault := "Calibri"
+font := fontDefault
+
+fontsizeDefault := 10
+fontsize := fontsizeDefault
+
+linesInListMaxDefault := 30
+linesInListMax := linesInListMaxDefault
+
+notepadPathDefault := "C:\Program Files\Notepad++\notepad++.exe"
+notepadpath := notepadPathDefault
+
+menuhotkeyDefault := "!p"
+exitHotkeyDefault := "+!p"
+menuHotkey := menuhotkeyDefault
+exitHotkey := exitHotkeyDefault
+
+selscaEntriesArr := []
+linkListArr := {}
+
+msg_control_array = []
+
+autoconfirm := false
+
+createMime()
+
+pathBackup := resolvepath(wrkDir,"_thePathBackup.txt")
+
+; *********** Gui parameter ***********
+windowPosX := 0
+windowPosY := 0
+clientWidth := 0
+clientHeight := 0
+
+borderX := 10
+borderY := 40 ; reserve statusbar space
+
+;-------------------------------- read param --------------------------------
+hasParams := A_Args.Length()
+autoSelectName := ""
+starthidden := false
+restapi := true
+
+if (hasParams != 0){
+  Loop % hasParams
+  {
+    if(eq(A_Args[A_index],"remove")){
+      showHint("Selsca removed!", 2000)
+      sleep,2000
+      ExitApp,0
+    }
+
+    if(eq(A_Args[A_index],"hidewindow")){
+      starthidden := true
+    }
+
+    if(eq(A_Args[A_index],"restapioff")){
+      restapi := false
+    }
+
+    FoundPos := RegExMatch(A_Args[A_index],"\([\s\w]+?\)", found)
+    
+    If (FoundPos > 0){
+      autoSelectName := found
+      showHint(app . " selected entry: " . autoSelectName, 3000)
+    }
+  }
+}
+
+prepare()
+
+;-------------------------------- serverHttp --------------------------------
+paths := {}
+paths["/selsca"] := Func("selscaRest")
+
+if (restApi){
+  serverHttp := new HttpServer()
+  serverHttp.LoadMimes(A_ScriptDir . "/mime.types")
+  serverHttp.SetPaths(paths)
+  serverHttp.Serve(selscaRestPort)
+}
+
+if (starthidden){
+  hktext := hotkeyToText(menuHotkey)
+  tipScreenTopTime("Started " . app . ", Hotkey is: " . hktext, 4000)
+}
+
+mainWindow(starthidden)
+
+if (autoSelectName != "")
+  autoSelect(autoSelectName)
+
+
+return
+
+;-------------------------------- selscaRest --------------------------------
+selscaRest(ByRef req, ByRef res) {
+; request example -> curl http://localhost:65501/selsca?version=(Scala-2.13.5)
+  v := req.queries["version"]
+  res.SetBodyText("Setting Scala version to: " . v)
+  autoSelect(v)
+  res.status := 200
+  
+  return
+}
+;------------------------------ registerWindow ------------------------------
+registerWindow(){
+  global activeWin
+  
+  activeWin := WinActive("A")
+
+  return
+}
+;-------------------------------- checkFocus --------------------------------
+checkFocus(){
+  global hMain
+
+  h := WinActive("A")
+  if (hMain != h){
+    hideWindow()
+  }
+    
+  return
+}
+;-------------------------------- mainWindow --------------------------------
+mainWindow(hide := false) {
+  global hMain
+  global font
+  global fontsize
+  
+  global selscaEntriesArr
+  global selscaFile
+  global toolsFile
+  global configFile
+  global app
+  global appName
+  global menuHotkey
+  global exitHotkey
+  global listWidth
+  global LV1
+  global appVersion
+
+  global linesInListMax
+  global linesInListMaxDefault
+  global windowPosX
+  global windowPosY
+  global clientWidth
+  global clientHeight
+  global pathBackup
+
+  Menu, Tray, UseErrorLevel   ; This affects all menus, not just the tray.
+
+  Menu, MainMenu, DeleteAll
+  Menu, MainMenuEdit, DeleteAll
+  Menu, MainMenuInternet, DeleteAll
+  
+  Menu, MainMenuEdit,Add,Edit Selsca-file: "%selscaFile%" with Notepad++,editselscaFile
+  Menu, MainMenuEdit,Add,Edit Config-file: "%configFile%" with Notepad++,editConfigFile
+  Menu, MainMenuEdit,Add,Edit PathBackup-file: "%pathBackup%" with Notepad++,editPathBackupFile
+  
+  Menu, MainMenuInternet,Add,Open %appName% Github webpage,openGithubPage
+  Menu, MainMenuInternet,Add,Open Scala 2 download webpage,openScala2Download
+  Menu, MainMenuInternet,Add,Open Scala 3 download webpage,openScala3Download
+  Menu, MainMenuInternet,Add,Open Scala 3 Linux download webpage,openScala3LinuxDownload
+  
+  Menu, MainMenu, NoDefault  
+  Menu, MainMenu, Add,Edit,:MainMenuEdit
+  Menu, MainMenu, Add,Show Path,showPath
+  Menu, MainMenu, Add,Windows Environment Tool,windowsEnvTool
+  Menu, MainMenu, Add,Update-check,checkUpdate
+  Menu, MainMenu, Add,Update,updateApp
+  Menu, MainMenu, Add,Internet resources,:MainMenuInternet
+  Menu, MainMenu, Add,Kill app,exit
+  
+  Gui,guiMain:New, +OwnDialogs +LastFound MaximizeBox hwndhMain +Resize +DPIScale, %app% [%configFile%]
+  
+  Gui, guiMain:Font, s%fontsize%, %font%
+
+  xStart := 8
+  yStart := 5
+  linesInList := Min(linesInListMax, selscaEntriesArr.length())
+  
+  Gui, Add, ListView, x%xStart% y%yStart% r%linesInList% w%listWidth% GguiMainListViewClick vLV1 AltSubmit -Multi Grid, |Name|Scala-path|Scala-bin-path
+
+  for index, element in selscaEntriesArr
+  {
+    elementArr := StrSplit(element,",")
+    LV_Add("",index,elementArr[1], elementArr[2], elementArr[3])
+  }
+  
+  LV_ModifyCol(1,"Auto Integer")
+  LV_ModifyCol(2,"Auto Text")
+  LV_ModifyCol(3,"Auto Text")
+  LV_ModifyCol(4,"Auto Text")
+  LV_ModifyCol(5,"Auto Text")
+  
+  Gui, guiMain:Add, StatusBar
+  
+  showMessageSelsca()
+  
+  Gui, guiMain:Menu, MainMenu
+  
+  Gui, guiMain:Show, x%windowPosX% y%windowPosY% w%clientWidth% h%clientHeight%
+  setTimer,registerWindow,-500
+    
+  if (!hide){
+    setTimer,checkFocus,3000
+  } else {
+    Gui, guiMain:Hide
+  }
+  
+  OnMessage(0x200, "WM_MOUSEMOVE")
+  OnMessage(0x2a3, "WM_MOUSELEAVE")
+  
+  return
+}
+
+;------------------------------ guiMainGuiSize ------------------------------
+guiMainGuiSize(){  
+  global hMain, windowPosX, windowPosY
+  global clientWidthDefault, clientHeightDefault, clientWidth, clientHeight
+  global dpiCorrect
+  global LV1, borderX, borderY
+
+  if (A_EventInfo != 1) {
+    ; not minimized
+    clientWidth := A_GuiWidth
+    clientHeight := A_GuiHeight
+    
+    WinGetPos, windowPosX, windowPosY,,, ahk_id %hMain%
+    
+    GuiControl, Move, LV1, % "W" . (clientWidth  - borderX) . " H" . (clientHeight - borderY)
+  }
+  
+  return
+}
+;----------------------------- showMessageSelsca -----------------------------
+showMessageSelsca(hk1 := "", hk2 := ""){
+  global menuHotkey
+  global exitHotkey
+
+  SB_SetParts(160,300)
+  if (hk1 != ""){
+    SB_SetText(" " . hk1 , 1, 1)
+  } else {
+    SB_SetText(" " . "Hotkey: " . hotkeyToText(menuHotkey) , 1, 1)
+  }
+    
+  if (hk2 != ""){
+    SB_SetText(" " . hk2 , 2, 1)
+  } else {
+    SB_SetText(" " . "Exit-hotkey: " . hotkeyToText(exitHotkey) , 2, 1)
+  }
+   
+  memory := "[" . GetProcessMemoryUsage() . " MB]      "
+  SB_SetText("`t`t" . memory , 3, 2)
+
+  return
+}
+;**************************** linkSelectedAction ****************************
+linkSelectedAction(){
+  global linkListArr
+
+  if (A_GuiEvent = "Normal"){
+    selectedEntry := linkListArr[A_EventInfo]
+    clipboard := selectedEntry
+  
+    showHint("Copied to clipboard (you are an admin!): " . selectedEntry,3000)
+    sleep, 3000
+    showWindow()
+  }
+  
+  return
+}
+; *********************************** prepare ******************************
+prepare() {
+  
+  readConfig()
+  readSelsca()
+  readGuiData()
+
+  return
+}
+; *********************************** showWindow ******************************
+showWindow(){
+  global windowPosX
+  global windowPosY
+  global clientWidth
+  global clientHeight
+  
+  setTimer,checkFocus,3000
+  Gui, guiMain:Show, x%windowPosX% y%windowPosY% w%clientWidth% h%clientHeight%
+  
+  return
+}
+;********************************* hideWindow *********************************
+hideWindow(){
+
+  setTimer,checkFocus,delete
+  Gui,guiMain:Hide
+
+  return
+}
+;---------------------------- showWindowRefreshed ----------------------------
+showWindowRefreshed(){
+  global menuHotkey
+
+  refreshGui()
+  showWindow()
+  
+  showMessageSelsca()
+  
+  return
+}
+;********************************** readIni **********************************
+readConfig(){
+  global configFile
+  global menuhotkeyDefault
+  global menuHotkey
+  global exitHotkeyDefault
+  global exitHotkey
+  global notepadpath
+  global notepadPathDefault
+  global fontDefault
+  global font
+  global fontsizeDefault
+  global fontsize
+  global listWidthDefault
+  global listWidth
+  global linesInListMax
+  global linesInListMaxDefault
+  global selscaRestPortDefault
+  global selscaRestPort
+
+; read Hotkey definition
+  IniRead, menuHotkey, %configFile%, hotkeys, menuhotkey , %menuhotkeyDefault%
+  Hotkey, %menuHotkey%, showWindowRefreshed
+  
+  IniRead, exitHotkey, %configFile%, hotkeys, exitHotkey , %exitHotkeyDefault%
+  Hotkey, %exitHotkey%, exit
+  
+  IniRead, notepadpath, %configFile%, external, notepadpath, %notepadPathDefault%
+  
+  IniRead, font, %configFile%, config, font, %fontDefault%
+  IniRead, fontsize, %configFile%, config, fontsize, %fontsizeDefault%
+  
+  IniRead, listWidth, %configFile%, config, listWidth, %listWidthDefault%
+  IniRead, linesInListMax, %configFile%, config, linesInListMax, %linesInListMaxDefault%
+  
+  IniRead, selscaRestPort, %configFile%, config, selscaRestPort, %selscaRestPortDefault%
+
+  return
+}
+;********************************* readSelsca *********************************
+readSelsca(){
+  global selscaFile
+  global selscaEntriesArr
+  global param
+
+  selscaEntriesArr := []
+
+  Loop, read, %selscaFile%
+  {
+    if (A_LoopReadLine != "") {
+      selscaEntriesArr.Push(A_LoopReadLine)
+    }
+  }
+  
+  return
+}
+
+  
+  
+  
+  
+  
+
+;******************************** refreshGui ********************************
+refreshGui(){
+  global selscaEntriesArr
+
+  prepare()
+
+  LV_Delete()
+  
+  for index, element in selscaEntriesArr
+  {
+    elementArr := StrSplit(element,",")
+    LV_Add("",index,elementArr[1], elementArr[2], elementArr[3], elementArr[4])
+  }
+  
+  return
+}
+;--------------------------- guiMainListViewClick ---------------------------
+guiMainListViewClick(){
+  if (A_GuiEvent = "normal"){
+    LV_GetText(rowSelected, A_EventInfo)
+    runInDir(rowSelected)
+  }
+
+  return
+}
+;-------------------------------- autoSelect --------------------------------
+autoSelect(autoSelectName){
+  global selscaEntriesArr
+  global autoconfirm
+  
+  ;search for the name and get the number
+  ln := 0
+  
+  l := selscaEntriesArr.length()
+  Loop, %l%
+  {
+      selscaEntryArr := StrSplit(selscaEntriesArr[A_Index],",")
+      selscaEntryName := selscaEntryArr[1]
+
+    if (eq(autoSelectName,selscaEntryName)){
+      ln := A_Index
+      autoconfirm := true
+      showHint("Selected Scala: " . autoSelectName, 2000)
+      sleep,2000
+    }
+  }
+
+  if(ln != 0)
+    runInDir(ln)
+
+  return
+}
+;--------------------------------- runInDir ---------------------------------
+runInDir(lineNumber){
+  global wrkDir
+  global pathBackup
+  global selscaFile
+  global selscaEntriesArr
+  global toolsArr
+  global setEXE4J
+  global autoconfirm
+  global autoSelectName
+
+  if (lineNumber != 0){
+
+    ks := getKeyboardState()
+    switch ks
+    {
+    case 1:
+      ;*** Capslock ***
+      showMessageSelsca("Operation inhibited due to [Capslock]!")
+
+    case 2:
+      ;*** Alt ***
+      showMessageSelsca("Click + [Alt] is not yet used!")
+  
+    case 4:
+      ;*** Ctrl ***
+      s := selscaEntriesArr[lineNumber]
+      
+      setTimer,unselect,-100
+      
+      entry := StrSplit(s,",")
+      
+      path := entry[2]
+      
+      Runwait, %path%
+      
+      showMessageSelsca()
+      
+    case 8:
+      ;*** Shift = edit ***
+
+      s := selscaEntriesArr[lineNumber]
+      
+      setTimer,unselect,-100
+      InputBox,inp,Edit command,,,,100,,,,,%s%
+      
+      if (ErrorLevel){
+        showHint("Canceled!",2000)
+        sleep,2000
+        showWindow()
+      } else {
+        ;save new command
+        selscaEntriesArr[lineNumber] := inp
+        
+        content := ""
+        
+        l := selscaEntriesArr.Length()
+        
+        Loop, % l
+        {
+          content := content . selscaEntriesArr[A_Index] . "`n"
+        }
+
+        FileDelete, %selscaFile%
+        FileAppend, %content%, %selscaFile%, UTF-8-RAW
+      
+        showWindowRefreshed()
+      }
+    default:
+      ; selscaEntriesArr[lineNumber][1] is the name, which is used as a marker only
+      
+      selscaEntryArr := StrSplit(selscaEntriesArr[lineNumber],",")
+      scalaPath := envVariConvert(selscaEntryArr[2])
+      scalaPathBin := StrReplace(envVariConvert(selscaEntryArr[3]),"...",scalaPath)
+      
+      MAXQ := 10 ; may 10 path-cmds in log
+      que := ""
+      
+      if FileExist(pathBackup){
+        FileRead,que,%pathBackup%
+        FileDelete, %pathBackup%
+        if (ErrorLevel){
+          msgbox, Severe error deleting %pathBackup%
+          exit()
+        }
+      }
+       
+      RegRead, thePathRead,HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment,Path
+      
+      thePath := strReplace(thePathRead,";;",";")
+      
+      Que := StrQ( Que, thePath, MAXQ, "`n`n`n" ) ; add a new item to Que 
+      
+      FormatTime, dateTime 
+      
+      out := dateTime . ":`n`n" . Que
+      FileAppend, %out%, %pathBackup%, UTF-8-RAW
+      if (ErrorLevel){
+        msgbox, Severe error saving %pathBackup%
+        exit()
+      }
+            
+      a := StrSplit(thePath,";")
+
+      s := ""
+      for index, element in a
+      {
+        if (!RegExMatch(element,"\\scala.*?\\bin") && !RegExMatch(element,"\\scala3.*?\\bin"))
+          s := s . element . ";"
+      }
+
+      s := SubStr(s,1,-1) ; remove last ";"
+
+      ;prepend
+      if (scalaPathBin != ""){
+        s := scalaPathBin . ";" . s
+      }
+      
+      setEnv := setSystemEnvCmd(s, "PATH")
+      
+      pv := strReplace(s,";",";`n")
+  
+      if (!autoconfirm){
+          retScrollBox := ScrollBox(pv,"pb2","Windows-Path")
+          if (retScrollBox == 1)
+          {
+            Run, %setEnv%,,min
+            
+            setEnv := setSystemEnvCmd(scalaPath, "SCALA_HOME")
+            Run, %setEnv%,,min
+      
+            showHint("Finished!", 2000)
+            sleep,2000
+          } else {
+            showHint("canceled!", 2000)
+            sleep,2000
+          }
+      } else {
+        RunWait, %setEnv%,,min
+        
+        setEnv := setSystemEnvCmd(scalaPath, "SCALA_HOME")
+        Run, %setEnv%,,min
+      }
+      showMessageSelsca()
+    }
+  }
+  
+  return
+}
+;------------------------------ setSystemEnvCmd ------------------------------
+setSystemEnvCmd(s := "", p := "PATH"){
+
+  theEnv := ""
+  if(s != ""){
+    theEnv := cvtPath("%SystemRoot%\System32\windowspowershell\v1.0\powershell.exe","")
+    theEnv := theEnv . " -NoProfile -ExecutionPolicy Bypass -Command """
+    theEnv := theEnv . "$newEnvVari = '" . s . "'`n"
+    theEnv := theEnv . "[Environment]::SetEnvironmentVariable('" . p . "', ""$newEnvVari"",'Machine');""`n"
+  }
+  
+  ;msgbox, % theEnv
+
+  return theEnv
+}
+;********************************* unselect *********************************
+unselect(){
+  sendinput {left}
+}
+;********************************** restart **********************************
+restart(){
+  exitApp,1
+  
+  return
+}
+;------------------------------ openGithubPage ------------------------------
+openGithubPage(){
+  global appName
+  
+  csave := clipboardall
+
+  StringLower, name, appName
+  clipboard :=  "https://github.com/jvr-ks/" . name
+  sendInput,#r
+  sleep,1000
+  sendInput,^v
+  sendInput,{ENTER}
+  
+  clipboard := csave
+  
+  return
+}
+;---------------------------- openScala2Download ----------------------------
+openScala2Download(){
+  
+  csave := clipboardall
+  clipboard := "https://www.scala-lang.org/download/scala2.html"
+  sendInput,#r
+  sleep,1000
+  sendInput,^v
+  sendInput,{ENTER}
+  clipboard := csave
+  
+  return
+}
+;---------------------------- openScala3Download ----------------------------
+openScala3Download(){
+  
+  csave := clipboardall
+  clipboard := "https://www.scala-lang.org/download/scala3.html"
+  sendInput,#r
+  sleep,1000
+  sendInput,^v
+  sendInput,{ENTER}
+  clipboard := csave
+  
+  return
+}
+
+;-------------------------- openScala3LinuxDownload --------------------------
+openScala3LinuxDownload(){
+
+  csave := clipboardall
+  clipboard := "https://repo1.maven.org/maven2/org/scala-lang/scala3-compiler_3/"
+  sendInput,#r
+  sleep,1000
+  sendInput,^v
+  sendInput,{ENTER}
+  clipboard := csave
+  return
+}
+;******************************* editselscaFile *******************************
+editselscaFile() {
+  global selscaFile
+  global notepadpath
+  
+  showMessageSelsca("Please close the editor to refresh the menu!")
+  f := notepadpath . " " . selscaFile
+  runWait %f%,,max
+  showMessageSelsca()
+  
+  showWindowRefreshed()
+
+  return
+}
+;--------------------------------- showPath ---------------------------------
+showPath(){
+
+  RegRead, thePath,HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment,Path
+  
+  a := StrSplit(thePath,";")
+
+  s := ""
+  for index, element in a
+  {
+    s := s . element . "`n"
+  }
+
+  retScrollBox := ScrollBox(s,"pb1","Windows-Path")
+  
+  showWindow()
+  
+  return
+}
+;******************************** editConfigFile ********************************
+editConfigFile() {
+  global configFile
+  global notepadpath
+  
+  f := notepadpath . " " . configFile
+  showMessageSelsca("Please close the editor to refresh the menu!")
+
+  runWait %f%
+  showMessageSelsca()
+  
+  showWindowRefreshed()
+
+  return
+}
+;***************************** editLinkListFile *****************************
+editLinkListFile() {
+  global notepadpath
+  global linkListFile
+
+  f := notepadpath . " " . linkListFile
+  showMessageSelsca("Please close the editor to refresh the menu!")
+  runWait %f%
+  showMessageSelsca()
+  
+  showWindowRefreshed()
+
+  return
+}
+;---------------------------- editPathBackupFile ----------------------------
+editPathBackupFile() {
+  global notepadpath
+  global pathBackup
+
+  f := notepadpath . " " . pathBackup
+  showMessageSelsca("Please close the editor to refresh the menu!")
+  runWait %f%
+  showMessageSelsca()
+  
+  showWindowRefreshed()
+
+  return
+}
+
+;************************************ ret ************************************
+ret() {
+  return
+}
+;********************************* checkJava *********************************
+checkJava(){
+  global wrkDir
+  
+  msg := "Please use the external app ""javaVersion.exe"" to check the Java-version!"
+  showMessageSelsca(msg)
+}
+; *********************************** hkToDescription ******************************
+; in Lib
+; *********************************** hotkeyToText ******************************
+; in Lib
+;***************************** getKeyboardState *****************************
+; in Lib
+;********************************** cvtPath **********************************
+cvtPath(s, path){
+  r := s
+  pos := 0
+
+  While pos := RegExMatch(r,"O)(\[\.\.\.\])", match, pos+1){
+    r := RegExReplace(r, "\" . match.1, path, , 1, pos)
+  }
+  
+  While pos := RegExMatch(r,"O)(\[.*?\])", match, pos+1){
+    r := RegExReplace(r, "\" . match.1, shortcut(match.1), , 1, pos)
+  }
+
+  While pos := RegExMatch(r,"O)(%.+?%)", match, pos+1){
+    r := RegExReplace(r, match.1, envVariConvert(match.1), , 1, pos)
+  }
+  return r
+}
+;****************************** envVariConvert ******************************
+envVariConvert(s){
+  r := s
+  if (InStr(s,"%")){
+    s := StrReplace(s,"`%","")
+    EnvGet, v, %s%
+    Transform, r, Deref, %v%
+  }
+
+  return r
+}
+;********************************* shortcut *********************************
+shortcut(s){
+  global shortcutsArr
+  
+  r := s
+
+  sc := shortcutsArr[r]
+  if (sc != "")
+    r := sc
+
+  return r
+}
+;-------------------------------- readGuiData --------------------------------
+readGuiData(){
+  global configFile, windowPosX, windowPosY, clientWidth, clientHeight
+  global dpiCorrect, dpiScale
+
+  IniRead, dpiScale, %configFile%, gui, dpiScale, 96
+  if (dpiScale == "" || dpiScale == "ERROR")
+    dpiScale := 96
+    
+  dpiCorrect := A_ScreenDPI / dpiScale
+    
+  IniRead, windowPosX, %configFile%, gui, windowPosX, 0
+  if (windowPosX == "" || windowPosX == "ERROR")
+    windowPosX := 0
+  
+  IniRead, windowPosY, %configFile%, gui, windowPosY, 0
+  if (windowPosY == "" || windowPosY == "ERROR")
+    windowPosY := 0
+
+  IniRead, clientWidth, %configFile%, gui, clientWidth, 800
+  if (clientWidth == "" || clientWidth == "ERROR")
+    clientWidth := 800
+  
+  IniRead, clientHeight, %configFile%, gui, clientHeight, 600
+  if (clientHeight == "" || clientHeight == "ERROR")
+    clientHeight := 600
+   
+  return
+}
+;-------------------------------- saveGuiData --------------------------------
+saveGuiData(){
+  global hMain, configFile, windowPosX, windowPosY, clientWidth, clientHeight
+  global dpiCorrect, dpiScale
+  
+  WinGetPos, windowPosX, windowPosY,,, ahk_id %hMain%
+
+  if (windowPosX < -100)
+    windowPosX := 0
+    
+  if (windowPosY < -100)
+    windowPosY := 0
+    
+  IniWrite, %dpiScale%, %configFile%, gui, dpiScale
+  
+  IniWrite, %windowPosX%, %configFile%, gui, windowPosX
+  IniWrite, %windowPosY%, %configFile%, gui, windowPosY
+  
+  IniWrite, %clientWidth%, %configFile%, gui, clientWidth
+  IniWrite, %clientHeight%, %configFile%, gui, clientHeight
+  
+  return
+}
+
+;------------------------------- WM_MOUSEMOVE -------------------------------
+WM_MOUSEMOVE(wParam, lParam) {
+  global msg_control_array
+  
+  ;Gui, main:submit, nohide
+
+  X := lParam & 0xFFFF
+  Y := lParam >> 16
+  
+  if (A_GuiControl){
+    Loop, parse, msg_control_array, `,
+    { 
+      if (A_GuiControl == A_LoopField){
+        tooltip, %msg%,,,9
+        break
+      }
+      msg := A_LoopField
+    }
+    sleep 10000
+    OnMessage(0x200, "")
+  ToolTip,,,,9
+  }
+  
+  return
+}      
+;******************************* WM_MOUSELEAVE *******************************
+WM_MOUSELEAVE(wParam, lParam) {
+  ToolTip,,,,9
+  
+  return
+}
+;------------------------------ windowsEnvTool ------------------------------
+windowsEnvTool(){
+  runWait  C:\Windows\System32\SystemPropertiesAdvanced.exe
+  return
+}
+;---------------------------- nativeImageInstall ----------------------------
+nativeImageInstall(){
+
+  runcmd := A_ComSpec
+  Run, %runcmd%,,max
+  sleep, 2000
+  sendinput gu install native-image{Enter}
+  sleep, 3000
+  sendinput exit{Enter}
+  
+  return
+}
+;-------------------------------- openJavaDir --------------------------------
+openJavaDir(){
+
+  EnvGet, runcmd, JAVA_HOME
+  Run, %runcmd%,,max  
+  
+  return
+}
+;-------------------------------- resolvepath --------------------------------
+resolvepath(wrkPath,path) {
+  r := ""
+  c := ""
+  
+  if (SubStr(wrkPath,0,1) != "\") ; last character
+    c := "\"
+    
+  r := wrkPath . c . path
+  if (InStr(path,":"))
+    r := path
+    
+  return r
+}
+;--------------------------------- showHint ---------------------------------
+showHint(s, n){
+  global font
+  global fontsize
+  
+  Gui, hint:Destroy
+  Gui, hint:Font, %fontsize%, %font%
+  Gui, hint:Add, Text,, %s%
+  Gui, hint:-Caption
+  Gui, hint:+ToolWindow
+  Gui, hint:+AlwaysOnTop
+  Gui, hint:Show
+  t := -1 * n
+  setTimer,showHintDestroy, %t%
+  return
+}
+;------------------------------ showHintDestroy ------------------------------
+showHintDestroy(){
+  global hinttimer
+
+  setTimer,showHintDestroy, delete
+  Gui, hint:Destroy
+  return
+}
+;---------------------------------- tipTop ----------------------------------
+tipTop(msg, n := 1){
+
+  s := StrReplace(msg,"^",",")
+  
+  toolX := Floor(A_ScreenWidth / 2)
+  toolY := 2
+
+  CoordMode,ToolTip,Screen
+  ToolTip,%s%, toolX, toolY, n
+  
+  WinGetPos, X,Y,W,H, ahk_class tooltips_class32
+
+  toolX := (A_ScreenWidth / 2) - W / 2
+  
+  ToolTip,%s%, toolX, toolY, n
+  
+  return
+}
+;----------------------------- tipScreenTopTime -----------------------------
+tipScreenTopTime(msg, t := 2000, n := 1){
+  ; Closes all tips after timeout
+
+  CoordMode,ToolTip,Screen
+  tipTop(msg, n)
+  
+  if (t > 0){
+    tvalue := -1 * t
+    SetTimer,tipTopClose,%tvalue%
+  }
+  
+  CoordMode,ToolTip,Client
+  return
+}
+;-------------------------------- tipTopClose --------------------------------
+tipTopClose(){
+  
+  Loop, 20
+  {
+    ToolTip,,,,%A_Index%
+  }
+  
+  return
+}
+;--------------------------- GetProcessMemoryUsage ---------------------------
+GetProcessMemoryUsage(){
+
+  OwnPID := DllCall("GetCurrentProcessId")
+  static PMC_EX := "", size := NumPut(VarSetCapacity(PMC_EX, 8 + A_PtrSize * 9, 0), PMC_EX, "uint")
+
+  if (hProcess := DllCall("OpenProcess", "uint", 0x1000, "int", 0, "uint", OwnPID)) {
+    if !(DllCall("GetProcessMemoryInfo", "ptr", hProcess, "ptr", &PMC_EX, "uint", size))
+      if !(DllCall("psapi\GetProcessMemoryInfo", "ptr", hProcess, "ptr", &PMC_EX, "uint", size))
+        return (ErrorLevel := 2) & 0, DllCall("CloseHandle", "ptr", hProcess)
+    DllCall("CloseHandle", "ptr", hProcess)
+    return Round(NumGet(PMC_EX, 8 + A_PtrSize * 8, "uptr") / 1024**2, 2)
+  }
+  return (ErrorLevel := 1) & 0
+}
+;----------------------------- getKeyboardState -----------------------------
+getKeyboardState(){
+  r := 0
+  if (getkeystate("Capslock","T") == 1)
+    r := r + 1
+    
+  if (getkeystate("Alt","P") == 1)
+    r := r + 2
+    
+  if (getkeystate("Ctrl","P") == 1)
+    r:= r + 4
+    
+  if (getkeystate("Shift","P") == 1)
+    r:= r + 8
+    
+  if (getkeystate("LWin","P") == 1)
+    r:= r + 16
+    
+  if (getkeystate("RWin","P") == 1)
+    r:= r + 16
+
+  return r
+}
+;----------------------------------- StrQ -----------------------------------
+; from https://www.autohotkey.com/boards/viewtopic.php?t=57295#p328684
+
+StrQ(Q, I, Max:=10, D:="|") { ;          StrQ v.0.90,  By SKAN on D09F/D34N @ tiny.cc/strq
+Local LQ:=StrLen(Q), LI:=StrLen(I), LD:=StrLen(D), F:=0
+Return SubStr(Q:=(I)(D)StrReplace(Q,InStr(Q,(I)(D),,0-LQ+LI+LD)?(I)(D):InStr(Q,(D)(I),0,LQ
+-LI)?(D)(I):InStr(Q,(D)(I)(D),0)?(D)(I):"","",,1),1,(F:=InStr(Q,D,0,1,Max))?F-1:StrLen(Q))
+}
+;------------------------------------ eq ------------------------------------
+eq(a, b) {
+  if (InStr(a, b) && InStr(b, a))
+    return 1
+  return 0
+}
+;-------------------------------- createMime --------------------------------
+createMime(){
+  
+  if (!FileExist("mime.types")){
+    FileAppend,
+    (LTrim
+    text/html                             html htm shtml
+    text/css                              css
+    text/xml                              xml
+    image/gif                             gif
+    image/jpeg                            jpeg jpg
+    application/x-javascript              js
+    application/atom+xml                  atom
+    application/rss+xml                   rss
+
+    text/mathml                           mml
+    text/plain                            txt
+    text/vnd.sun.j2me.app-descriptor      jad
+    text/vnd.wap.wml                      wml
+    text/x-component                      htc
+
+    image/png                             png
+    image/tiff                            tif tiff
+    image/vnd.wap.wbmp                    wbmp
+    image/x-icon                          ico
+    image/x-jng                           jng
+    image/x-ms-bmp                        bmp
+    image/svg+xml                         svg svgz
+    image/webp                            webp
+
+    application/java-archive              jar war ear
+    application/mac-binhex40              hqx
+    application/msword                    doc
+    application/pdf                       pdf
+    application/postscript                ps eps ai
+    application/rtf                       rtf
+    application/vnd.ms-excel              xls
+    application/vnd.ms-powerpoint         ppt
+    application/vnd.wap.wmlc              wmlc
+    application/vnd.google-earth.kml+xml  kml
+    application/vnd.google-earth.kmz      kmz
+    application/x-7z-compressed           7z
+    application/x-cocoa                   cco
+    application/x-java-archive-diff       jardiff
+    application/x-java-jnlp-file          jnlp
+    application/x-makeself                run
+    application/x-perl                    pl pm
+    application/x-pilot                   prc pdb
+    application/x-rar-compressed          rar
+    application/x-redhat-package-manager  rpm
+    application/x-sea                     sea
+    application/x-shockwave-flash         swf
+    application/x-stuffit                 sit
+    application/x-tcl                     tcl tk
+    application/x-x509-ca-cert            der pem crt
+    application/x-xpinstall               xpi
+    application/xhtml+xml                 xhtml
+    application/zip                       zip
+
+    application/octet-stream              bin exe dll
+    application/octet-stream              deb
+    application/octet-stream              dmg
+    application/octet-stream              eot
+    application/octet-stream              iso img
+    application/octet-stream              msi msp msm
+
+    audio/midi                            mid midi kar
+    audio/mpeg                            mp3
+    audio/ogg                             ogg
+    audio/x-m4a                           m4a
+    audio/x-realaudio                     ra
+
+    video/3gpp                            3gpp 3gp
+    video/mp4                             mp4
+    video/mpeg                            mpeg mpg
+    video/quicktime                       mov
+    video/webm                            webm
+    video/x-flv                           flv
+    video/x-m4v                           m4v
+    video/x-mng                           mng
+    video/x-ms-asf                        asx asf
+    video/x-ms-wmv                        wmv
+    video/x-msvideo                       avi
+    ), mime.types, UTF-8-RAW
+  }
+  
+  return
+}
+;----------------------------------- exit -----------------------------------
+exit() {
+  global app
+  
+  ;saveConfig()
+  saveGuiData()
+  
+  showHint("""" . app . """ removed from memory!", 1500)
+  sleep,1500
+  ExitApp,0
+  
+  return
+}
+;----------------------------------------------------------------------------
+
+
+
