@@ -102,7 +102,7 @@ wrkDir := A_ScriptDir . "\"
 appName := "Selsca"
 appnameLower := "selsca"
 extension := ".exe"
-appVersion := "0.046"
+appVersion := "0.047"
 
 bit := (A_PtrSize=8 ? "64" : "32")
 
@@ -295,7 +295,10 @@ mainWindow(hide := false) {
   Menu, MainMenuInternet,Add, Open %appName% Github webpage,openGithubPage
   Menu, MainMenuInternet,Add, Download Scala 2, downloadScala2
   Menu, MainMenuInternet,Add, Download Scala 3, downloadScala3
+  
+  Menu, MainMenuInternet,Add, Open Scala 3 Windows download webpage,openScala3WindowsDownload
   Menu, MainMenuInternet,Add, Open Scala 3 Linux download webpage,openScala3LinuxDownload
+  Menu, MainMenuInternet,Add, Open Scala 3 download installer etc. from Github webpage,openScala3GithubDownload
   
   Menu, MainMenuUpdate,Add, Check if new version is available, startCheckUpdate
   Menu, MainMenuUpdate,Add, Start updater, startUpdate
@@ -945,6 +948,33 @@ downloadScala3(){
   }
   clipboard := csave
   
+  return
+}
+
+
+
+;------------------------- openScala3GithubDownload -------------------------
+openScala3GithubDownload(){
+
+  csave := clipboardall
+  clipboard := "https://github.com/scala/scala3/releases"
+  sendInput,#r
+  sleep,1000
+  sendInput,^v
+  sendInput,{ENTER}
+  clipboard := csave
+  return
+}
+;------------------------- openScala3WindowsDownload -------------------------
+openScala3WindowsDownload(){
+
+  csave := clipboardall
+  clipboard := "https://www.scala-lang.org/download/all.html"
+  sendInput,#r
+  sleep,1000
+  sendInput,^v
+  sendInput,{ENTER}
+  clipboard := csave
   return
 }
 ;-------------------------- openScala3LinuxDownload --------------------------

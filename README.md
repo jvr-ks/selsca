@@ -3,10 +3,11 @@
 
 Set the default scala version for use in a scala-script.  
 
-** DEPRECATED! ** 
-The app is obsolete now!  
-Use [scala-cli](https://scala-cli.virtuslab.org/) with  
-//> using scala "3"  
+If using [scala-cli](https://scala-cli.virtuslab.org/) you may set the scalaversion with:  
+  
+````  
+//> using scala "3.6.4"  
+````
 to make a scala-script now!  
 Read:  [What is the difference between Scala runner and Scala CLI](https://virtuslab.com/blog/scala/scala-cli-the-new-scala-runner/) too.  
 
@@ -277,6 +278,6 @@ Start of development: 2021/04/17
 
 
 ##### Virusscan at Virustotal 
-[Virusscan at Virustotal, selsca.exe 64bit-exe, Check here](https://www.virustotal.com/gui/url/bf89ffe0f4f09bca2fd35f696f2c28716cd5107c2dcff1070621a002909bcca8/detection/u-bf89ffe0f4f09bca2fd35f696f2c28716cd5107c2dcff1070621a002909bcca8-1746100560
+[Virusscan at Virustotal, selsca.exe 64bit-exe, Check here](https://www.virustotal.com/gui/url/bf89ffe0f4f09bca2fd35f696f2c28716cd5107c2dcff1070621a002909bcca8/detection/u-bf89ffe0f4f09bca2fd35f696f2c28716cd5107c2dcff1070621a002909bcca8-1746785338
 )  
 Use [CTRL] + Click to open in a new window! 
