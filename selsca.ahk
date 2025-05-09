@@ -295,7 +295,7 @@ mainWindow(hide := false) {
   Menu, MainMenuInternet,Add, Open %appName% Github webpage,openGithubPage
  
   Menu, MainMenuInternet,Add, Open Scala 3/2 Windows download webpage (scala-lang), openScala3WindowsDownload
-  Menu, MainMenuInternet,Add, Open Scala 3 Linux download webpage (scala-lang), openScala3LinuxDownload
+  Menu, MainMenuInternet,Add, Open Scala 3 Linux download webpage (maven.org), openScala3LinuxDownload
   Menu, MainMenuInternet,Add, Open Scala 3 download installer etc. (Github), openScala3GithubDownload
   Menu, MainMenuInternet,Add, Download Scala 3 Windows (Github) known version, downloadScala3
   Menu, MainMenuInternet,Add, Download Scala 2 Windows (Typesafe) known version, downloadScala2
