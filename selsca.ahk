@@ -102,7 +102,7 @@ wrkDir := A_ScriptDir . "\"
 appName := "Selsca"
 appnameLower := "selsca"
 extension := ".exe"
-appVersion := "0.047"
+appVersion := "0.048"
 
 bit := (A_PtrSize=8 ? "64" : "32")
 
@@ -293,12 +293,12 @@ mainWindow(hide := false) {
   Menu, MainMenuEdit,Add, Edit PathBackup-file: "%pathBackup%" with Notepad++,editPathBackupFile
   
   Menu, MainMenuInternet,Add, Open %appName% Github webpage,openGithubPage
-  Menu, MainMenuInternet,Add, Download Scala 2, downloadScala2
-  Menu, MainMenuInternet,Add, Download Scala 3, downloadScala3
-  
-  Menu, MainMenuInternet,Add, Open Scala 3 Windows download webpage, openScala3WindowsDownload
-  Menu, MainMenuInternet,Add, Open Scala 3 Linux download webpage, openScala3LinuxDownload
-  Menu, MainMenuInternet,Add, Open Scala 3 download installer etc. from Github webpage, openScala3GithubDownload
+ 
+  Menu, MainMenuInternet,Add, Open Scala 3/2 Windows download webpage (scala-lang), openScala3WindowsDownload
+  Menu, MainMenuInternet,Add, Open Scala 3 Linux download webpage (scala-lang), openScala3LinuxDownload
+  Menu, MainMenuInternet,Add, Open Scala 3 download installer etc. (Github), openScala3GithubDownload
+  Menu, MainMenuInternet,Add, Download Scala 3 Windows (Github) known version, downloadScala3
+  Menu, MainMenuInternet,Add, Download Scala 2 Windows (Typesafe) known version, downloadScala2
   
   Menu, MainMenuUpdate,Add, Check if new version is available, startCheckUpdate
   Menu, MainMenuUpdate,Add, Start updater, startUpdate
@@ -901,16 +901,8 @@ restart(){
 openGithubPage(){
   global appName
   
-  csave := clipboardall
-
   StringLower, name, appName
-  clipboard :=  "https://github.com/jvr-ks/" . name
-  sendInput,#r
-  sleep,1000
-  sendInput,^v
-  sendInput,{ENTER}
-  
-  clipboard := csave
+  Run, "https://github.com/jvr-ks/" . name
   
   return
 }
