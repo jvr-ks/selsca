@@ -296,9 +296,9 @@ mainWindow(hide := false) {
   Menu, MainMenuInternet,Add, Download Scala 2, downloadScala2
   Menu, MainMenuInternet,Add, Download Scala 3, downloadScala3
   
-  Menu, MainMenuInternet,Add, Open Scala 3 Windows download webpage,openScala3WindowsDownload
-  Menu, MainMenuInternet,Add, Open Scala 3 Linux download webpage,openScala3LinuxDownload
-  Menu, MainMenuInternet,Add, Open Scala 3 download installer etc. from Github webpage,openScala3GithubDownload
+  Menu, MainMenuInternet,Add, Open Scala 3 Windows download webpage, openScala3WindowsDownload
+  Menu, MainMenuInternet,Add, Open Scala 3 Linux download webpage, openScala3LinuxDownload
+  Menu, MainMenuInternet,Add, Open Scala 3 download installer etc. from Github webpage, openScala3GithubDownload
   
   Menu, MainMenuUpdate,Add, Check if new version is available, startCheckUpdate
   Menu, MainMenuUpdate,Add, Start updater, startUpdate
@@ -950,43 +950,25 @@ downloadScala3(){
   
   return
 }
-
-
-
 ;------------------------- openScala3GithubDownload -------------------------
 openScala3GithubDownload(){
 
-  csave := clipboardall
-  clipboard := "https://github.com/scala/scala3/releases"
-  sendInput,#r
-  sleep,1000
-  sendInput,^v
-  sendInput,{ENTER}
-  clipboard := csave
+  Run, "https://github.com/scala/scala3/releases"
+  
   return
 }
 ;------------------------- openScala3WindowsDownload -------------------------
 openScala3WindowsDownload(){
 
-  csave := clipboardall
-  clipboard := "https://www.scala-lang.org/download/all.html"
-  sendInput,#r
-  sleep,1000
-  sendInput,^v
-  sendInput,{ENTER}
-  clipboard := csave
+  Run, "https://www.scala-lang.org/download/all.html"
+
   return
 }
 ;-------------------------- openScala3LinuxDownload --------------------------
 openScala3LinuxDownload(){
 
-  csave := clipboardall
-  clipboard := "https://repo1.maven.org/maven2/org/scala-lang/scala3-compiler_3/"
-  sendInput,#r
-  sleep,1000
-  sendInput,^v
-  sendInput,{ENTER}
-  clipboard := csave
+  Run, "https://repo1.maven.org/maven2/org/scala-lang/scala3-compiler_3/"
+  
   return
 }
 ;--------------------------------- showPath ---------------------------------
