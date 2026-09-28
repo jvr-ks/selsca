@@ -1,3 +1,4 @@
+(Scala3-3.9.0),C:\shared\scala3-3.9.0,...\bin
 (Scala3-3.8.4),C:\shared\scala3-3.8.4,...\bin
 (Scala3-3.8.3),C:\shared\scala3-3.8.3,...\bin
 (Scala3-3.7.4),C:\shared\scala3-3.7.4,...\bin
